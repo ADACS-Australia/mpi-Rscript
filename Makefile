@@ -13,3 +13,6 @@ $(TARGET):
 install: $(TARGET)
 	@echo "Installing $(TARGET_NAME) to /usr/local/bin/ ..."; \
 	install -m 755 $(TARGET) /usr/local/bin/$(TARGET_NAME)
+
+uninstall:
+	rm /usr/local/bin/$(TARGET_NAME)
