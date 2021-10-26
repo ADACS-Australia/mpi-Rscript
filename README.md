@@ -8,7 +8,7 @@ make
 ```
 This will insert the correct full path to the Rprofile used by the script and place the executable in the `bin` subdirectory.
 
-If you want the script to be available as command from any directory, you can 'install' it with
+If you want the script to be available as a command from any directory, you can "install" it with
 ```
 make install
 ```
