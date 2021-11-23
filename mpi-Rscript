@@ -1,5 +1,16 @@
 #! /bin/sh
 
+if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+    cat << EOF
+This script is just a wrapper around Rscript for running MPI enabled R programs with a master-slave parallelism.
+
+e.g. usage:
+    mpirun -n 4 mpi-Rscript <my-script>
+
+EOF
+exit 1
+fi
+
 # Create temporary Rprofile file
 tmpfile=$(mktemp /tmp/mpi-Rprofile.XXXXXX)
 
