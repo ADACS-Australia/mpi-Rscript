@@ -13,25 +13,31 @@ fi
 
 # Create temporary Rprofile file
 tmpfile=$(mktemp /tmp/mpi-Rprofile.XXXXXX)
+tmpfile2=$(mktemp /tmp/mpi-Rprofile-mods.XXXXXX)
+
+cat > "${tmpfile2}" << 'EOF'
+sendData.MPInode <- function(node, data) {Rmpi::mpi.isend.Robj(data, node$rank, node$SENDTAG, node$comm)}
+
+EOF
+
 
 cat > "${tmpfile}" << EOF
-library(Rmpi)
-library(snow)
+insertSource("${tmpfile2}", package="snow")
 
-if (mpi.comm.rank(0) > 0) {
+if (Rmpi::mpi.comm.rank(0) > 0) {
     sys.load.image(".RData", TRUE)
     .First.sys()
     sink(file = "/dev/null")
-    slaveLoop(makeMPImaster())
-    mpi.quit()
+    snow::slaveLoop(snow::makeMPImaster())
+    Rmpi::mpi.quit()
 } else {
-    makeMPIcluster()
+    snow::makeMPIcluster()
     .Last <<- function() {
-        cl <- getMPIcluster()
+        cl <- snow::getMPIcluster()
         if (!is.null(cl)) {
-            stopCluster(cl)
+            snow::stopCluster(cl)
         }
-        mpi.quit()
+        Rmpi::mpi.quit()
     }
 }
 
@@ -83,4 +89,4 @@ else
 fi
 
 # Clean up Rprofile file
-rm -f "${tmpfile}"
+rm -f "${tmpfile}" "${tmpfile2}"
