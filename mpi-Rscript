@@ -1,21 +1,41 @@
 #!/usr/bin/env bash
 
-if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
-cat << EOF
+# Don't use blocking sends by default
+BLOCKING_SEND=false
+
+# Loop over command line arguments
+for ((i=1; i<=$#; i++)); do
+
+    # Print help
+    if [ "${!i}" == "-h" ] || [ "${!i}" == "--help" ]; then
+        cat << EOF
 This script is just a wrapper around Rscript for running MPI enabled R programs with a master-slave parallelism.
 It also ensures that 'snow' MPI clusters use non-blocking sends.
 
 e.g. usage:
     mpirun -n 4 mpi-Rscript <my-script>
+
+options:
+    -h, --help          Print this message
+    -b, --blocking      Use blocking mpi sends in snow cluster
 EOF
-exit 1
-fi
+        exit 1
+    fi
+
+    # Turn on blocking sends
+    if [ "${!i}" == "-b" ] || [ "${!i}" == "--blocking" ]; then
+        shift
+        BLOCKING_SEND=true
+    fi
+done
 
 # Create temp file for overloading snow's MPI send function
 tmp_modfile=$(mktemp /tmp/mpi-Rprofile-mods.XXXXXX)
+if ! $BLOCKING_SEND; then
 cat > "${tmp_modfile}" << 'EOF'
 sendData.MPInode <- function(node, data) {Rmpi::mpi.isend.Robj(data, node$rank, node$SENDTAG, node$comm)}
 EOF
+fi
 
 # Create temporary Rprofile file
 tmp_rprofile=$(mktemp /tmp/mpi-Rprofile.XXXXXX)
