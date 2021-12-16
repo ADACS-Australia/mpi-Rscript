@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+{
+
+# Exit on any error
+set -e
 
 # Don't use blocking sends by default
 BLOCKING_SEND=false
@@ -108,3 +112,6 @@ fi
 
 # Clean up temp files
 rm -f "${tmp_rprofile}" "${tmp_modfile}"
+
+exit
+}
