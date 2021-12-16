@@ -1,28 +1,26 @@
 #! /bin/sh
 
 if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
-    cat << EOF
+cat << EOF
 This script is just a wrapper around Rscript for running MPI enabled R programs with a master-slave parallelism.
+It also ensures that 'snow' MPI clusters use non-blocking sends.
 
 e.g. usage:
     mpirun -n 4 mpi-Rscript <my-script>
-
 EOF
 exit 1
 fi
 
-# Create temporary Rprofile file
-tmpfile=$(mktemp /tmp/mpi-Rprofile.XXXXXX)
-tmpfile2=$(mktemp /tmp/mpi-Rprofile-mods.XXXXXX)
-
-cat > "${tmpfile2}" << 'EOF'
+# Create temp file for overloading snow's MPI send function
+tmp_modfile=$(mktemp /tmp/mpi-Rprofile-mods.XXXXXX)
+cat > "${tmp_modfile}" << 'EOF'
 sendData.MPInode <- function(node, data) {Rmpi::mpi.isend.Robj(data, node$rank, node$SENDTAG, node$comm)}
-
 EOF
 
-
-cat > "${tmpfile}" << EOF
-insertSource("${tmpfile2}", package="snow")
+# Create temporary Rprofile file
+tmp_rprofile=$(mktemp /tmp/mpi-Rprofile.XXXXXX)
+cat > "${tmp_rprofile}" << EOF
+insertSource("${tmp_modfile}", package="snow")
 
 if (Rmpi::mpi.comm.rank(0) > 0) {
     sys.load.image(".RData", TRUE)
@@ -40,10 +38,10 @@ if (Rmpi::mpi.comm.rank(0) > 0) {
         Rmpi::mpi.quit()
     }
 }
-
 EOF
 
-export R_PROFILE="${tmpfile}"
+# Use Rprofile file to affect behaviour of master/slaves on launch and shutdown
+export R_PROFILE="${tmp_rprofile}"
 
 if test ! -z "${LAMRANK}" ; then
     # use the LAMRANK environment variable set by LAM-MPI's mpirun to
@@ -88,5 +86,5 @@ else
     Rscript --no-save $*
 fi
 
-# Clean up Rprofile file
-rm -f "${tmpfile}" "${tmpfile2}"
+# Clean up temp files
+rm -f "${tmp_rprofile}" "${tmp_modfile}"
