@@ -33,18 +33,18 @@ EOF
     fi
 done
 
-# Create temp file for overloading snow's MPI send function
+# Create temp file for removing the GC call from Rmpi
 tmp_modfile=$(mktemp /tmp/mpi-Rprofile-mods.XXXXXX)
 if ! $BLOCKING_SEND; then
 cat > "${tmp_modfile}" << 'EOF'
-sendData.MPInode <- function(node, data) {Rmpi::mpi.isend.Robj(data, node$rank, node$SENDTAG, node$comm)}
+mpi.send.Robj <- function(obj, dest, tag, comm=1){mpi.send(x=serialize(obj, NULL), type=4, dest=dest, tag=tag, comm=comm)}
 EOF
 fi
 
 # Create temporary Rprofile file
 tmp_rprofile=$(mktemp /tmp/mpi-Rprofile.XXXXXX)
 cat > "${tmp_rprofile}" << EOF
-insertSource("${tmp_modfile}", package="snow")
+insertSource("${tmp_modfile}", package="Rmpi")
 
 if (Rmpi::mpi.comm.rank(0) > 0) {
     sys.load.image(".RData", TRUE)
